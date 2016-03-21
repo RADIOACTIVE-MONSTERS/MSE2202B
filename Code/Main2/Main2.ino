@@ -8,9 +8,16 @@ ExtraCore extraCore;
 //Ultrasonic (TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE)
 NewPing sonar(7, 8, 200);
 
-//ben change
+//Servos
+Servo shoulderServo;
+Servo elbowServo;
+Servo handServo;
+Servo torsoServo;
 
 typedef enum ultrasonic { distance_front, distance_back, distance_up, distance_angle };
+
+//Force Sensor
+const int forceSensor = 0; 
 
 // Hall Effect
 const int ci_HallEffect_Data = A3;
@@ -18,12 +25,24 @@ const int ci_HallEffect_Data = A3;
 // Line Sensor
 const int ci_LineSensor_Data = A3;
 
+const int shoulderPin = 8;    //numbers are wrong
+const int elbowPin = 9;
+const int handPin = 2;
+const int torsoPin = 3;
+
+
 void setup()
 {
   extraCore.beginManager();//begin Manager role. (beginClient() on remote)
   //extraCore.setPinIOstate(pinNumber, OUTPUT);
   Serial.begin(9600);  
   Serial.println("Manager Ready.");
+
+  //attaching servos
+  shoulderServo.attach(shoulderPin, 500, 2500);
+  elbowServo.attach(elbowPin, 500, 2500);
+  handServo.attach(handPin, 500, 2500);
+  torsoServo.attach(torsoPin, 500, 2500);
   
   // set up Hall Effect
   pinMode(ci_HallEffect_Data, INPUT);
@@ -86,4 +105,80 @@ boolean DetectBlackLine()
   Serial.print("Hall Effect Value: ");
   Serial.println(sensorValue, DEC);
   */
+}
+
+void moveArm(int pos)           //moves arm to different positions
+{
+  if (pos == 1)   //searching
+  {
+    torsoServo.write(10);
+    delay(500);
+    //handServo.write(125);
+    moveMagnet(true);
+    delay(100);
+    elbowServo.write(180);
+    delay(100);
+    shoulderServo.write(36);
+    delay(100);
+  }
+  else if (pos == 2)    //dropping off
+  {
+    torsoServo.write(100);
+    delay(500);
+    shoulderServo.write(60);
+    delay(100);
+    elbowServo.write(180);
+    delay(500);
+    //handServo.write(15);
+    moveMagnet(false);
+    delay(100);
+  }
+  else if (pos == 3)  //going under bridge
+  {
+    torsoServo.write(10);
+    delay(500);
+    //handServo.write(125);
+    moveMagnet(true);
+    delay(100);
+    elbowServo.write(116);
+    delay(100);
+    shoulderServo.write(36);
+    delay(100);
+  }
+  else if (pos == 4)  //extended
+  {
+    torsoServo.write(10);
+    delay(500);
+    //handServo.write(125);
+    moveMagnet(true);
+    delay(100);
+    elbowServo.write(116);
+    delay(100);
+    shoulderServo.write(108);
+    delay(100);
+  }
+}
+
+int readForceSensor()           //returns value from the force sensor
+{
+  int forceReading = analogRead(forcePin);
+  Serial.print("Analog reading = ");
+  Serial.println(forceReading);
+  return forceReading;
+}
+
+void armJiggle()        //will eventually move the arm back and forth for searching
+{
+  torsoServo.write(20);
+  delay(20);
+  torsoServo.write(0);
+  delay(20);
+}
+
+void moveMagnet (boolean extended)      //extends and retracts magnet
+{
+  if (extended)
+    handServo.write(125);
+  else
+    handServo.write(25);
 }
