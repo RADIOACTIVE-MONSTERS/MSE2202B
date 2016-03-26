@@ -14,6 +14,9 @@ VarSpeedServo shoulderServo;
 VarSpeedServo elbowServo;
 VarSpeedServo handServo;
 VarSpeedServo torsoServo;
+Servo leftMotor;
+Servo rightMotor;
+
 
 typedef enum ultrasonic { distance_front, distance_back, distance_up, distance_left, distance_angle };
 
@@ -31,6 +34,8 @@ const int elbowPin = 8;
 const int handPin = 7;
 const int torsoPin = 5;
 
+const int rightMotorPin = 10;
+const int leftMotorPin = 11;
 
 void setup()
 {
@@ -44,6 +49,9 @@ void setup()
   elbowServo.attach(elbowPin, 500, 2500);
   handServo.attach(handPin, 500, 2500);
   torsoServo.attach(torsoPin, 500, 2500);
+
+  leftMotor.attach(leftMotorPin, 500, 2500);
+  rightMotor.attach(rightMotorPin, 500, 2500);
   
   // set up Hall Effect
   pinMode(ci_HallEffect_Data, INPUT);
@@ -62,6 +70,8 @@ void loop()
   extraCore.sendConfig();//changes won't take effect until you sendConfig();*/
   
   //programArm();
+  leftMotor.write(150);     //driving straight(ish)
+  rightMotor.write(150);
   
   /* MAIN CODE GOES HERE! :) */
   /*Serial.println("l00p");
