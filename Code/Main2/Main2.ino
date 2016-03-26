@@ -2,6 +2,7 @@
 #include <Wire.h>
 #include <EasyTransferI2C.h>
 #include <NewPing.h>
+#include <VarSpeedServo.h> 
 
 ExtraCore extraCore;
 
@@ -9,15 +10,15 @@ ExtraCore extraCore;
 NewPing sonar(7, 8, 200);
 
 //Servos
-Servo shoulderServo;
-Servo elbowServo;
-Servo handServo;
-Servo torsoServo;
+VarSpeedServo shoulderServo;
+VarSpeedServo elbowServo;
+VarSpeedServo handServo;
+VarSpeedServo torsoServo;
 
-typedef enum ultrasonic { distance_front, distance_back, distance_up, distance_angle };
+typedef enum ultrasonic { distance_front, distance_back, distance_up, distance_left, distance_angle };
 
 //Force Sensor
-const int forceSensor = 0; 
+const int forcePin = A0; 
 
 // Hall Effect
 const int ci_HallEffect_Data = A3;
@@ -25,10 +26,10 @@ const int ci_HallEffect_Data = A3;
 // Line Sensor
 const int ci_LineSensor_Data = A3;
 
-const int shoulderPin = 8;    //numbers are wrong
-const int elbowPin = 9;
-const int handPin = 2;
-const int torsoPin = 3;
+const int shoulderPin = 3;    //numbers are wrong
+const int elbowPin = 8;
+const int handPin = 7;
+const int torsoPin = 5;
 
 
 void setup()
@@ -52,7 +53,7 @@ void setup()
   
 void loop()
 {
-  delay(100);//Don't remove this delay. Sending updates too quickly will block data returning.
+  delay(10);//Don't remove this delay. Sending updates too quickly will block data returning.
   // Setup PWM example.
 
   /* 2nd core EXAMPLE **
@@ -60,12 +61,73 @@ void loop()
   extraCore.setDigitalOutput(pinNumber, HIGH);//Set the remote digital high.
   extraCore.sendConfig();//changes won't take effect until you sendConfig();*/
   
-  
+  //programArm();
   
   /* MAIN CODE GOES HERE! :) */
-
+  /*Serial.println("l00p");
+  Serial.println(Ping(distance_front));
+  Serial.println(Ping(distance_back));
+  Serial.println(Ping(distance_angle));
+  Serial.println(Ping(distance_left));*/
+  //Serial.println(readForceSensor());
+ 
+  //moveArm(1);
+  //Serial.println("start");
+  //programArm();
+  
+  programArmPot();
+  /*
+  
+  if (!holdingTesseract()) {
+    moveArm(1);
+  }
+  else {
+    moveArm(5);
+  }*/
+  
 }
 
+void programArm() {
+  int arm = 0;
+  VarSpeedServo* servo;
+  int degree = 0;
+  while (Serial.available() == 0);
+  arm = Serial.parseInt();
+  if(arm == 1)
+    servo = &torsoServo;
+  else if (arm == 2)
+    servo = &shoulderServo;
+  else
+     servo = &elbowServo;
+   Serial.flush();
+   while (Serial.available() == 0);
+   degree = Serial.parseInt();
+   servo->write(degree);
+   
+   Serial.print("moved ");
+   Serial.print(arm);
+   Serial.print(" to ");
+   Serial.println(degree);
+   Serial.flush();
+}
+
+void programArmPot() {
+  moveMagnet (true);
+  int angle1 = analogRead(A1)/1023.0*180.0;
+  int angle2 = analogRead(A2)/1023.0*180.0;
+  int angle3 = analogRead(A3)/1023.0*180.0;
+  torsoServo.write(angle1);
+  shoulderServo.write(angle2);
+  elbowServo.write(angle3);
+  /*
+  Serial.print("(");
+   Serial.print(angle1);
+   Serial.print(", ");
+   Serial.print(angle2);
+   Serial.print(", ");
+   Serial.print(angle3);
+   Serial.println(")");*/
+}
 
 // measure distance to target using ultrasonic sensor  
 int Ping(int type)
@@ -73,8 +135,9 @@ int Ping(int type)
   switch(type)
   {
       case distance_front  : return (extraCore.getAnalogReading(A1))/10;   break;
-      case distance_back: return (extraCore.getAnalogReading(A2))/10;  break;
-      case distance_angle : return (extraCore.getAnalogReading(A0))/5;  break;
+      case distance_back: return (extraCore.getAnalogReading(A3))/10;  break;
+      case distance_angle : return (extraCore.getAnalogReading(A0)-extraCore.getAnalogReading(A2))/5;  break;
+      case distance_left : return (extraCore.getAnalogReading(A0)+extraCore.getAnalogReading(A2))/20;  break;
       case distance_up : return sonar.ping_cm(); break;
   }
   
@@ -111,15 +174,11 @@ void moveArm(int pos)           //moves arm to different positions
 {
   if (pos == 1)   //searching
   {
-    torsoServo.write(10);
-    delay(500);
-    //handServo.write(125);
+    servoSequencePoint seq[] = {{110,40},{160,40}};
+    torsoServo.sequencePlay(seq, 2, true, 0);
     moveMagnet(true);
-    delay(100);
-    elbowServo.write(180);
-    delay(100);
-    shoulderServo.write(36);
-    delay(100);
+    elbowServo.write(160, 30);
+    shoulderServo.write(175, 30);
   }
   else if (pos == 2)    //dropping off
   {
@@ -157,6 +216,16 @@ void moveArm(int pos)           //moves arm to different positions
     shoulderServo.write(108);
     delay(100);
   }
+  else if (pos == 5) {
+    //torsoServo.write(127, 30);
+    moveMagnet(true);
+    elbowServo.write(180, 30);
+    shoulderServo.write(55, 30);
+  }
+}
+
+boolean holdingTesseract() {
+  return readForceSensor() < 500;
 }
 
 int readForceSensor()           //returns value from the force sensor
