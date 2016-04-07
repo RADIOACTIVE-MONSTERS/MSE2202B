@@ -76,9 +76,6 @@ boolean bt_Time_Up = false;
 boolean bt_Do_Once = false;
 unsigned long bt_timer = 0;
 
-///////////////////////////////
-
-
 typedef enum ultrasonic { distance_front, distance_back, distance_up, distance_left, distance_angle };
 
 //Force Sensor
@@ -99,10 +96,8 @@ void setup()
 {
   Wire.begin();
   motorEncoderInit();
-  //extraCore.setPinIOstate(pinNumber, OUTPUT);
   Serial.begin(9600);  
   Serial.println("Manager Ready.");
-
   updateScreen("loading...");
   //attaching servos
   shoulderServo.attach(shoulderPin, 500, 2500);
@@ -114,7 +109,6 @@ void setup()
   rightMotor.attach(rightMotorPin, 500, 2500);
   frontMotor.attach(frontMotorPin, 500, 2500);
   backMotor.attach(backMotorPin, 500, 2500);
- 
  
   Forward_Position_GoTo = 0;
   Right_Position_GoTo = 0;
@@ -135,7 +129,6 @@ void setup()
   frontMotor.write(1500);
   backMotor.write(1500);
   
-   
   // set up Hall Effect
   pinMode(ci_HallEffect_Data, INPUT);
   //digitalWrite(ci_HallEffect_Data, HIGH);
@@ -156,17 +149,8 @@ void setup()
   
 void loop()
 {
-  //Forward_Position_GoTo += 4;
-  //Right_Position_GoTo += 4;
-  //Angle_Offset +=5;
-  //HallEffect();
   delay(10);//Don't remove this delay. Sending updates too quickly will block data returning.
   Serial.println(ultrasonic_back);
-  /*programArm();
-  return;/* */
-  /*moveArm(8);
-   * 
-*/
   if((millis() - bt_timer) > 3000)
   {
     bt_Time_Up = true;
@@ -191,10 +175,9 @@ void loop()
     bt_Do_Once = LOW;
   }
 
-
   switch(ui_Mode_Index)
   {
-    case 0:    //Robot stopped
+    case 0:    //Mode 1
     {
       if(bt_Time_Up)
       {
@@ -202,7 +185,7 @@ void loop()
       }
       break;
     }
-    case 1:    //Robot stopped
+    case 1:    //Mode 2
     {
       if(bt_Time_Up)
       {
@@ -210,7 +193,7 @@ void loop()
       }
       break;
     }
-    case 2:    //Robot stopped
+    case 2:    //Diagnostics Mode
     {
       if(bt_Time_Up)
       {
@@ -224,44 +207,7 @@ void loop()
   }
   
   return;
-  
-  // Setup PWM example.
-  /*
-  Serial.print(", ");
-  Serial.print(ultrasonic_left);
-  Serial.print(", ");
-  Serial.print(ultrasonic_back);
-  Serial.print(", ");
-  Serial.println(ultrasonic_angle);
-  
-  Serial.print(ultrasonic_front_avg);
-  Serial.print(", ");
-  Serial.print(ultrasonic_left_avg);
-  Serial.print(", ");
-  Serial.print(ultrasonic_back_avg);
-  Serial.print(", ");
-  Serial.println(ultrasonic_angle_avg);
-  UpdateUltrasonics();
-  return;
-  //*/
-  
-  /* MAIN CODE GOES HERE! :) */
-  return;
-  finalDropOff();
-  return;
-  
-  //Serial.println(readForceSensor());
- 
-  //moveArm(1);
-  //Serial.println("start");
-  //programArm();
-  
-  //programArmPot();
-  
-  
 }
-
-//////////////////////////////////////////////////////////////////////////////
 
 void DiagnosticsMode() {
   int numberOfIssues = 0;
@@ -289,7 +235,6 @@ void DiagnosticsMode() {
   if(cm[3] == US_MAX)
     issue += " Front_US";
 
-
   int sensorValue = analogRead(ci_HallEffect_Data);
   if(sensorValue>510||sensorValue<495) {
     issue += " HallEffect";
@@ -307,7 +252,6 @@ void DiagnosticsMode() {
   
   if(issue == "Check:")
     issue = "Good to go";
-
   
   updateScreen(issue);
 }
@@ -389,7 +333,6 @@ void Mode1() {
 void Mode2() {
   searchCubeSpotAndPickup();
   finalDropOff();
-  
 }
 
 void updateMotors() {
@@ -406,24 +349,19 @@ void updateMotors(boolean US) {
 }
 
 void updateMotorsKeepDistanceFromLeft(int distance) {
-  //Right_Position_GoTo = (Front_Motor_Position+Back_Motor_Position)/2 + (ultrasonic_left_avg-distance);
   Right_Position_GoTo += constrain((ultrasonic_left_avg-distance)/5, -10, 10);
-  //if(Right_Position_
   updateMotors();
   UpdateUltrasonics();
 }
 
 void updateMotorsKeepDistanceFromLeftFar(int distance) {
-  //Right_Position_GoTo = (Front_Motor_Position+Back_Motor_Position)/2 + (ultrasonic_left_avg-distance);
   Right_Position_GoTo += constrain((ultrasonic_left_avg-distance)/5, -4, 4);
   Right_Position_GoTo = constrain(Right_Position_GoTo, (Front_Motor_Position+Back_Motor_Position)/2 - 100, (Front_Motor_Position+Back_Motor_Position)/2 + 100);
-  //if(Right_Position_
   updateMotors();
   UpdateUltrasonics();
 }
 
 void motorEncoderInit() {
-
   encoder_BackMotor.init(1.0/3.0*MOTOR_393_SPEED_ROTATIONS, MOTOR_393_TIME_DELTA);  
   encoder_BackMotor.setReversed(true);  // adjust for positive count when moving forward
   encoder_FrontMotor.init(1.0/3.0*MOTOR_393_SPEED_ROTATIONS, MOTOR_393_TIME_DELTA);
@@ -432,8 +370,8 @@ void motorEncoderInit() {
   encoder_RightMotor.setReversed(true);  // adjust for positive count when moving forward
   encoder_LeftMotor.init(1.0/3.0*MOTOR_393_SPEED_ROTATIONS, MOTOR_393_TIME_DELTA);
   encoder_LeftMotor.setReversed(false);  // adjust for positive count when moving forward 
-  
 }
+
 //Motors
 void writeToMotors() {
   leftMotor.write(1500 - Left_Motor_Speed);
@@ -497,7 +435,6 @@ void goHome() {
   const int angle = 10;
   
   while(ultrasonic_back_avg > back || ultrasonic_back == 0 || ultrasonic_left_avg > left || ultrasonic_left == 0) {
-  //ultrasonic_angle
     UpdateUltrasonics();
     if(ultrasonic_back_avg > back) {
       if(abs(ultrasonic_back_avg - back) < 100)
@@ -514,10 +451,6 @@ void goHome() {
     updateMotors();
     delay(10);
   }
-  /*startPosition();
-  Forward_Position_GoTo = 0;
-  Right_Position_GoTo = 0;*/
-  
 }
 
 void searchForSpotAndDropOff() {
@@ -550,7 +483,6 @@ void searchForSpotAndDropOff() {
   delay(1000);
   moveArm(0);
   delay(2000);
-  //goHome();
 }
 
 boolean searchCubeSpotAndPickup() {
@@ -565,7 +497,6 @@ boolean searchCubeSpotAndPickup() {
   }
 
   int originalPos = Forward_Position_GoTo;
-
   boolean detect = false;
   while(!detect) {
     
@@ -605,11 +536,8 @@ boolean searchCubeSpotAndPickup() {
     updateMotorsKeepDistanceFromLeftFar(100);
     delay(10);
   }
-  //slowMoveToPosition(0, 0, 300, false);
   return true;
 }
-
-
 
 void slowMoveToPosition(int forw, int right, int steps) {
   slowMoveToPosition(forw, right, steps, 0);
@@ -653,16 +581,8 @@ void finalDropOff() {
   }
   slowMoveToPosition(Forward_Position_GoTo+500, Right_Position_GoTo, 200, false);
   stopMotors();
-  /*leftMotor.detach();
-  rightMotor.detach();
-  frontMotor.detach();
-  backMotor.detach();*/
   moveArm(6);
   delay(2000);
-  /*leftMotor.attach(leftMotorPin, 500, 2500);
-  rightMotor.attach(rightMotorPin, 500, 2500);
-  frontMotor.attach(frontMotorPin, 500, 2500);
-  backMotor.attach(backMotorPin, 500, 2500);*/
   slowMoveToPosition(Forward_Position_GoTo-650, Right_Position_GoTo, 200, false);
   stopMotors();
   moveArm(7);
@@ -710,14 +630,13 @@ void programArmPot() {
   torsoServo.write(angle1);
   shoulderServo.write(angle2);
   elbowServo.write(angle3);
-  /*
   Serial.print("(");
-   Serial.print(angle1);
-   Serial.print(", ");
-   Serial.print(angle2);
-   Serial.print(", ");
-   Serial.print(angle3);
-   Serial.println(")");*/
+  Serial.print(angle1);
+  Serial.print(", ");
+  Serial.print(angle2);
+  Serial.print(", ");
+  Serial.print(angle3);
+  Serial.println(")");
 }
 
 
@@ -727,7 +646,6 @@ void UpdateUltrasonics()
 {
   Wire.requestFrom(8, 8);    // request 6 bytes from slave device #8
 
-  //static int cm_[4][US_NUMB] = {{999999,999999,999999,999999,999999},{999999,999999,999999,999999,999999},{999999,999999,999999,999999,999999},{999999,999999,999999,999999,999999}};
   static int cm_[4][US_NUMB] = {{US_MAX,US_MAX,US_MAX},{US_MAX,US_MAX,US_MAX},{US_MAX,US_MAX,US_MAX},{US_MAX,US_MAX,US_MAX}};
   static int cm_i[4] = {0};
   
@@ -738,7 +656,6 @@ void UpdateUltrasonics()
       continue;
      cm_i[i] = (cm_i[i]+1)%US_NUMB;
      cm_[i][cm_i[i]] = cm[i];
-      
   }
   
   for(int i = 0; i < 4; i++) {
@@ -781,7 +698,6 @@ boolean HallEffect()
   return false;
 }
 
-// HallEffect 
 boolean HallEffectSensitive()
 {
   int sensorValue = analogRead(ci_HallEffect_Data);
@@ -798,9 +714,6 @@ boolean HallEffectSensitive()
 boolean DetectBlackLine()
 {
   int sensorValue = analogRead(ci_LineSensor_Data);
-
-Serial.print("Blackline Value: ");
-  Serial.println(sensorValue, DEC);
   if(sensorValue > 500) {
      return true;
   }
@@ -819,7 +732,6 @@ boolean DetectDropoffBar()
 void moveArm(int pos)           //moves arm to different positions
 {
   if (pos == 0) {
-    //torsoServo.write(127, 30);
     moveMagnet(true);
     shoulderServo.write(55, 30, true);
     elbowServo.write(180, 30);
@@ -854,56 +766,56 @@ void moveArm(int pos)           //moves arm to different positions
     shoulderServo.write(149, 30);
     elbowServo.write(180, 30);
   }
-  else if (pos == 5)  //going under bridge
+  else if (pos == 5)
   {
     torsoServo.write(125, 30);
     shoulderServo.write(41, 30);
     elbowServo.write(50, 30);
   }
-  else if (pos == 6)  //going under bridge
+  else if (pos == 6)
   {
     torsoServo.write(125, 30);
     shoulderServo.write(90, 30);
     elbowServo.write(20, 30);
   }
-  else if (pos == 7)  //going under bridge
+  else if (pos == 7)
   {
     torsoServo.write(125, 30);
     shoulderServo.write(75, 30);
     elbowServo.write(140, 30);
   }
-  else if (pos == 8)  //extended
+  else if (pos == 8)
   {
     torsoServo.write(60, 30);
     shoulderServo.write(180, 30);
     elbowServo.write(10, 30);
   }
-  else if (pos == 9)  //extended
+  else if (pos == 9)
   {
     servoSequencePoint seq[] = {{55,10},{65,10}};
     torsoServo.sequencePlay(seq, 2, true, 0);
     shoulderServo.write(180, 30);
     elbowServo.write(103, 30);
   }
-  else if (pos == -1)  //going under bridge
+  else if (pos == -1)
   {
     torsoServo.write(125, 30);
     shoulderServo.write(41, 30);
     elbowServo.write(90, 30);
   }
-  else if (pos == 10)  //going under bridge
+  else if (pos == 10)
   {
     torsoServo.write(125, 30);
     elbowServo.write(0, 30, true);
     shoulderServo.write(120, 30, true);
   }
-  else if (pos == 11)  //going under bridge
+  else if (pos == 11)
   {
     torsoServo.write(125, 30);
     shoulderServo.write(180, 30);
     elbowServo.write(90, 30);
   }
-  else if (pos == 19)  //extended
+  else if (pos == 19)
   {
     torsoServo.write(105, 30);
     shoulderServo.write(180, 30);
@@ -913,9 +825,6 @@ void moveArm(int pos)           //moves arm to different positions
 
 // t: current time, b: beginning value, c: change in value, d: duration
 float quinticEase(float t, float b, float c, float d) {
-  /*t /= d;
-  t--;
-  return c*(t*t*t*t*t + 1) + b;*/
  t /= d;
  return -c * t*(t-2) + b;
 };
