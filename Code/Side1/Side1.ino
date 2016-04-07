@@ -1,13 +1,4 @@
-/*******************************************************************
- *
- *      No need to modify this file     *
- *
- *******************************************************************/
-
-#include <ExtraCore.h>
 #include <Wire.h>
-#include <EasyTransferI2C.h>
-
 #include <NewPing.h>
 
 #define SONAR_NUM     4 // Number of sensors.
@@ -19,20 +10,15 @@ int cm[SONAR_NUM];         // Where the ping distances are stored.
 uint8_t currentSensor = 0;          // Keeps track of which sensor is active.
 
 NewPing sonar[SONAR_NUM] = {     // Sensor object array.
-  NewPing(6, 7, MAX_DISTANCE), // Each sensor's trigger pin, echo pin, and max distance to ping.
-  NewPing(10, 12, MAX_DISTANCE),
-  NewPing(4, 5, MAX_DISTANCE),
-  NewPing(8, 9, MAX_DISTANCE)
+  NewPing(7, 6, MAX_DISTANCE), // Each sensor's trigger pin, echo pin, and max distance to ping.
+  NewPing(11, 10, MAX_DISTANCE),
+  NewPing(5, 4, MAX_DISTANCE),
+  NewPing(9, 8, MAX_DISTANCE)
 };
- 
-ExtraCore extraCore;
 
-void setup()
-{
-  //Serial.begin(9600);  
-  extraCore.onReceive(onRecieve);
-  extraCore.beginClient();
-  //Serial.println("client ready");
+void setup() {
+  Wire.begin(8);                // join i2c bus with address #8
+  Wire.onRequest(requestEvent); // register event
   
   //Ultrasonic
   pingTimer[0] = millis() + 75;           // First ping starts at 75ms, gives time for the Arduino to chill before starting.
@@ -40,8 +26,9 @@ void setup()
     pingTimer[i] = pingTimer[i - 1] + PING_INTERVAL;
 }
 
-void loop() 
-{
+void loop() {
+  delay(10);
+  
   //Ultrasonic
   for (uint8_t i = 0; i < SONAR_NUM; i++) { // Loop through all the sensors.
     if (millis() >= pingTimer[i]) {         // Is it this sensor's time to ping?
@@ -52,18 +39,6 @@ void loop()
       cm[currentSensor] = 0;                      // Make distance zero in case there's no ping echo for this sensor.
       sonar[currentSensor].ping_timer(echoCheck); // Do the ping (processing continues, interrupt will call echoCheck to look for echo).
     }
-  }
-  
-  
-  //Send data 50 times a second.
-  static long lastUpdate = 0;
-  if(lastUpdate + 20 < millis())
-  {  
-    lastUpdate = millis();
-    getDigitalData();
-    getAnalogData();
-    extraCore.sendData();
-    delay(1);
   }
 }
 
@@ -84,74 +59,9 @@ void oneSensorCycle() { // Sensor ping cycle complete, do something with the res
   Serial.println();
 }
 
-// Process incoming data.
-void onRecieve()
-{
-    setPinModes();
-    setIOstates();
-}
-
-//Set the local pins to the desired INPUT/OUTPUT
-void setPinModes()
-{
-  for(int i = 0; i < IOPINCOUNT; i++)
-  {
-    // A4 and A5 are reserved for i2c
-    if(i == A4 || i == A5) { continue; }
-    pinMode(i, extraCore.getPinIOstate(i));
-    digitalWrite(i, extraCore.getTriStateValue(i));
-  }
-}
-
-//Set local I/O to the desired values.
-void setIOstates()
-{
-  for(int i = 0; i < IOPINCOUNT; i++)
-  {
-    // A4 and A5 are reserved for i2c
-    if(i == A4 || i == A5) { continue; }
-    // If pin is output and not PWM
-    if(extraCore.getPinIOstate(i)  &&  extraCore.getAnalogValue(i) == 0)
-    {
-      digitalWrite(i, extraCore.getOutputValue(i));
-    }
-
-    // If pin is output and PWM
-    if(extraCore.getPinIOstate(i) && extraCore.getAnalogValue(i))
-    {
-      analogWrite(i, extraCore.getAnalogValue(i));
-    }
-  }
-}
-
-//Gather digital input values
-void getDigitalData()
-{
-  for(int i = 0; i < IOPINCOUNT; i++)
-  {
-    // A4 and A5 are reserved for i2c
-    if(i == A4 || i == A5) { continue; }
-    if(extraCore.getPinIOstate(i) == INPUT)
-    {
-      extraCore.setDigitalReading(i, digitalRead(i));
-    }
-  }
-}
-
-// Gather analog data
-void getAnalogData()
-{
-  
-  extraCore.setAnalogReading(A0, (cm[0]-cm[2]));
-  extraCore.setAnalogReading(A1, cm[1]);
-  extraCore.setAnalogReading(A2, cm[3]);
-  /*for(int i = A0; i < A6 + 1; i++)
-  {
-    // A4 and A5 are reserved for i2c
-    if(i == A4 || i == A5 || i== A0) { continue; }
-    if(extraCore.getPinIOstate(i) == INPUT)
-    {
-      extraCore.setAnalogReading(i, analogRead(i));
-    }  
-  }*/
+// function that executes whenever data is requested by master
+// this function is registered as an event, see setup()
+void requestEvent() {
+  byte array[8] = {cm[0]>>8,cm[0]&0xFF,cm[1]>>8,cm[1]&0xFF,cm[2]>>8,cm[2]&0xFF,cm[3]>>8,cm[3]&0xFF};
+  Wire.write(array,8);
 }
